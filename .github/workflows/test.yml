@@ -1,0 +1,39 @@
+# Installs the cask on a real Mac as a user would (brew install --cask sasou-web/mira/mira), checks the app, then
+# removes it. The tap is this checkout, tapped under its public name.
+name: test
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tap this checkout
+        run: |
+          brew update --quiet || true
+          brew tap sasou-web/mira "$GITHUB_WORKSPACE"
+          brew --version
+      - name: Install
+        run: |
+          brew install --cask sasou-web/mira/mira
+          test -d /Applications/Mira.app
+          codesign --verify --deep --strict /Applications/Mira.app
+          installed=$(defaults read /Applications/Mira.app/Contents/Info.plist CFBundleShortVersionString)
+          expected=$(sed -n 's/^  version "\(.*\)"$/\1/p' Casks/mira.rb)
+          echo "Mira $installed"
+          test "$installed" = "$expected"
+          # Homebrew keeps the quarantine: Gatekeeper asks once, as the caveats say.
+          xattr -p com.apple.quarantine /Applications/Mira.app
+          spctl --assess --type execute /Applications/Mira.app && echo "Gatekeeper accepts Mira" || echo "Gatekeeper asks before the first launch (not notarised)"
+      - name: Style and audit (the install trusted this cask, as it does for a user)
+        run: |
+          brew style --cask sasou-web/mira/mira
+          brew audit --cask --strict --online sasou-web/mira/mira
+      - name: Uninstall
+        run: |
+          brew uninstall --cask --zap sasou-web/mira/mira
+          test ! -e /Applications/Mira.app

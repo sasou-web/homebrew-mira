@@ -1,0 +1,31 @@
+# Follows the releases of sasou-web/Mira: every 3 hours (or by hand), the cask moves to the latest published release
+# once tools/bump.sh has checked its image, then test.yml installs it on a real Mac before anyone gets it.
+name: bump
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency: bump
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - id: bump
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: echo "version=$(sh tools/bump.sh Casks/mira.rb)" >> "$GITHUB_OUTPUT"
+      - if: steps.bump.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "mira $VERSION"
+          git push
+          # A push made with GITHUB_TOKEN starts no workflow: test.yml is started here.
+          gh workflow run test.yml --ref "$GITHUB_REF_NAME"
