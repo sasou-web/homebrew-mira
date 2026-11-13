@@ -1,6 +1,6 @@
 cask "mira" do
-  version "0.9.6"
-  sha256 "aa0d330e5216ea81a645cd4f317d46094029bc3fc5415b69d80023bad6e6c480"
+  version "0.9.7"
+  sha256 "2db8f0136d3b4d2ad54e7f7c423c552fdde0e3888efe24ac923ec5411ca08617"
 
   url "https://github.com/sasou-web/Mira/releases/download/v#{version}/Mira-#{version}-mac-arm64.dmg"
   name "Mira"
